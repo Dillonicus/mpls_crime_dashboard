@@ -1,0 +1,47 @@
+ucr code, crime category, offense, crime description
+1, Murder, JHOMIC, Justifiable Homicide
+1, Murder, MSLTR1, Mnsltr-heat/passion
+1, Murder, MURDR, Murder (general)
+1, Murder, MURDR1, 1st Deg Murder
+1, Murder, MURDR2, 2nd Deg Murder
+1, Murder, MURDR3, 3rd Deg Murder
+1, Murder, MNSLTR, Negligent Manslaughter
+1, Murder, MSLTR2, Negligent Manslaughter
+3, Rape, CSCR, Crim Sex Cond-rape
+4, Robbery, ROBBIZ, Robbery Of Business
+4, Robbery, ROBPAG, Robbery Per Agg
+4, Robbery, ROBPER, Robbery Of Person
+4, Robbery, CARJCK, Robbery Including Auto Theft
+5, Assault, ADLTTN, Adulteration/Poison
+5, Assault, ASLT1, 1st Deg Assault
+5, Assault, ASLT2, 2nd Deg Assault
+5, Assault, ASLT3, 3rd Deg Assault
+5, Assault, ASLT4, 4th Deg Assault
+5, Assault, DASLT1, 1st Deg Domestic Assault
+5, Assault, DASLT2, 2nd Deg Domestic Assault
+5, Assault, DASLT3, 3rd Deg Domestic Assault
+5, Assault, DASTR, Domestic Assault/Strangulation
+5, Assault, DISARM, Disarm A Police Officer
+6, Burglary, BURGB, Burglary Of Business
+6, Burglary, BURGD, Burglary Of Dwelling
+6, Burglary, LOOT, Looting
+7, Larceny, COINOP, Theft/coinop Device
+7, Larceny, COMPUT, Theft By Computer
+7, Larceny, METERS, Tamp W/park Meters
+7, Larceny, NOPAY, Gas Station Drive-off
+7, Larceny, PETIT, Petty Theft
+7, Larceny, POCKET, Pocket-picking
+7, Larceny, SHOPLF, Shoplifting
+7, Larceny, TBLDG, Theft From Building
+7, Larceny, TFMV, Theft From Motr Vehicle
+7, Larceny, TFPER, Theft From Person
+7, Larceny, THEFT, Other Theft
+7, Larceny, THFTSW, Theft By Swindle
+7, Larceny, TMVP, Motor Vehicle Parts Theft
+7, Larceny, BIKETF, Bike Theft
+7, Larceny, SCRAP, Scrapping/Recycling Theft
+7, Larceny, ONLTHT, Online Theft
+7, Larceny, WLKOFF, Fail To Pay Taxi/Hotel/Restaurant
+8, Auto Theft, AUTOTH, Motor Vehicle Theft
+8, Auto Theft, MVTHFT, Other Vehicle Theft
+10, Arson, ARSON, Arson
