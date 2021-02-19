@@ -24,7 +24,6 @@ library(ggridges)
 library(stringr)
 library(purrr)
 library(data.table)
-library(rintrojs)
 library(shinyjs)
 library(sf)
 library(reactable)
@@ -38,31 +37,31 @@ lapply(files, function(x) invisible(source(file = x)))
 # Functions --------------------------------------------------------------------
 
 html_dependency_prism <- function() {
-   htmltools::htmlDependency(
-      "prism",
-      "1.4.1",
-      src = 'www/prism/',
-      stylesheet = "prism.css",
-      script = "prism.js"
-   )
+  htmltools::htmlDependency(
+    "prism",
+    "1.4.1",
+    src = 'www/prism/',
+    stylesheet = "prism.css",
+    script = "prism.js"
+  )
 }
 
 prismAddTags <- function(code, language = "r") {
-   paste0("<pre><code class = 'language-", language, "'>",
-          code, 
-          "</code></pre>")
+  paste0("<pre><code class = 'language-", language, "'>",
+         code, 
+         "</code></pre>")
 }
 prismCodeBlock <- function(code, language = "r") {
-   tagList(
-      HTML(prismAddTags(code, language = language)),
-      tags$script("Prism.highlightAll()")
-   )
+  tagList(
+    HTML(prismAddTags(code, language = language)),
+    tags$script("Prism.highlightAll()")
+  )
 }
 
 leafletjs <- tags$head(
-   # add in methods from https://github.com/rstudio/leaflet/pull/598
-   tags$script(HTML(
-      "
+  # add in methods from https://github.com/rstudio/leaflet/pull/598
+  tags$script(HTML(
+    "
 window.LeafletWidget.methods.setStyle = function(category, layerId, style, label){
   var map = this;
   if (!layerId){
@@ -92,15 +91,15 @@ window.LeafletWidget.methods.setStyle = function(category, layerId, style, label
   });
 };
 "
-   )))
+  )))
 
 # Leaflet functions ------------------------------------------------------------
 
 # Clean data.table objects to be passed to leaflet directly
 sanitize_dt <- function(obj){
-   sanitized_dt <- obj[["geometry"]]
-   attr(sanitized_dt, "names") <- NULL
-   sanitized_dt
+  sanitized_dt <- obj[["geometry"]]
+  attr(sanitized_dt, "names") <- NULL
+  sanitized_dt
 }
 
 # Adds sanitize_dt to leaflet namespace
@@ -108,7 +107,7 @@ environment(sanitize_dt) <- asNamespace("leaflet")
 
 # Function to add polygons from data.table
 polygonData.data.table <- function(obj) {
-   leaflet:::polygonData(sanitize_dt(obj))
+  leaflet:::polygonData(sanitize_dt(obj))
 }
 
 # Add polygonData.data.table to leaflet namespace
@@ -116,8 +115,8 @@ environment(polygonData.data.table) <- asNamespace("leaflet")
 
 # Crime categories/descriptions
 crime_desc <- purrr::map(unique(codes$`crime category`),
-           ~{
-              a <- list(codes[`crime category` == .x, `crime description`])
-              names(a) <- .x
-              a
-           }) %>% flatten()
+                         ~{
+                           a <- list(codes[`crime category` == .x, `crime description`])
+                           names(a) <- .x
+                           a
+                         }) %>% flatten()

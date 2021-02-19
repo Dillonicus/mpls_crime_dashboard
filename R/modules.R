@@ -99,12 +99,8 @@ input_menu_ui <- function(id){
     tags$style(
       type = 'text/css', 
       '#Inputs-input_menu {margin: 0% 2.5% 0% 2.5%}'),
-    
-    introBox(data.step = 2, 
-             data.intro = "You can adjust these inputs to change what appears on the map and in the graphs on each page.", 
-             data.position = 'auto',
-             menuItemOutput(outputId = ns('input_menu'))
-             
+    menuItemOutput(
+      outputId = ns('input_menu')
     )
   )
 }
@@ -215,23 +211,16 @@ input_menu <- function(input, output, session, tab){
 
 info_ui <- function(id){
   ns <- NS(id)
-  box(width = 12, {
-  downloadLink(outputId = ns('downloadCSV'), 
-                 label = 'Download CSV of Crime Data')
   
   uiOutput(outputId = ns('info_text'))
-  })
+  
 }
 
 info <- function(input, output, session){
   ns <- session$ns
   
-  output$downloadCSV <- downloadHandler(
-    filename = 'data.csv', content = function(file) {
-      fwrite(crime, file)
-    })
-  
   output$info_text <- renderUI({
+    
     tagList(
       div(
         class = 'sidebartext',
@@ -241,11 +230,17 @@ info <- function(input, output, session){
            tags$li(strong("Dates:"), "filters crimes that occur in a certain interval;"),
            tags$li(strong("Crime Description:"), "changes which crimes will appear on map; and"),
            tags$li(strong("Time Unit:"), "changes the time unit for the bar chart.")),
-        h5("Select the", strong("Community Profiles"), "tab to see crime trends in specific communities or neighborhoods. 
-           To change the geographic area of interest, click the desired area on the map. Click the selected area again to return to a city-wide summary of the data. 
+        h5("Select the", strong("Community Profiles"), "tab to see crime trends in specific communities or neighborhoods.
+           To change the geographic area of interest, click the desired area on the map. Click the selected area again to return to a city-wide summary of the data.
            Available inputs include:",
            tags$li(strong("Year:"), "Changes the years visible in the summary table.")
-           )
+        ),
+        br(),
+        h5("Download the data used in this dashboard:"),
+        downloadHandler(
+          filename = 'data.csv', content = function(file) {
+            fwrite(crime, file)
+          })
       ))
   })
 }
@@ -268,12 +263,8 @@ map_ui <- function(id){
            fluidRow(
              box(id = 'mapbox',
                  width = 12,
-                 introBox(data.step = 1, 
-                          data.intro = 'This is the Map', 
-                          data.position = 'auto',
-                          leafletOutput(outputId = ns('base_map')
-                          ))))),
-   
+                 leafletOutput(outputId = ns('base_map'))))),
+    
     column(width = 5,
            tabBox(id = 'databox',
                   width = 12,
@@ -299,7 +290,7 @@ map_ui <- function(id){
                     fluidRow(
                       box(id = 'data1', width = 12, title = 'Data',
                           div(reactable::reactableOutput(outputId = ns('map_data')))))
-                    )
+                  )
            ))
   )}
 
@@ -343,14 +334,20 @@ map <- function(input, output, session, filtered_data, polys){
         group = "Communities", 
         weight = 1, 
         color = 'grey', 
-        label = ~name) %>%
+        label = ~name,
+        highlight = highlightOptions(
+          weight = 5,
+          color = "white")) %>%
       addPolygons(
         data = geo[type == 'neighborhood',], 
         layerId = ~layerid, 
         group = "Neighborhoods", 
         weight = 1, 
         color = 'grey', 
-        label = ~name) %>%
+        label = ~name,
+        highlight = highlightOptions(
+          weight = 5,
+          color = "white")) %>%
       addLayersControl(
         baseGroups = c("Communities", "Neighborhoods"), 
         options = layersControlOptions(collapsed = F))
@@ -428,7 +425,7 @@ map_add <- function(input, output, session, proxy, filtered_data, summarized_dat
             icon = ~crimeIcons[`crime category`],
             label = ~label, 
             group = "filtered_points"
-            )
+          )
       }}
   })
   
@@ -441,9 +438,10 @@ map_add <- function(input, output, session, proxy, filtered_data, summarized_dat
           data = summarized_data(),
           layerId = ~layerid, 
           fillColor = ~color, 
+          fillOpacity = 0.2,
           label = ~label
         )
-      }
+    }
   })
   
   observeEvent(input$base_map_groups, {
@@ -453,6 +451,7 @@ map_add <- function(input, output, session, proxy, filtered_data, summarized_dat
         data = summarized_data()[name %in% c(polys$prev(), polys$curr())],
         layerId = ~name,
         fillColor = ~color,
+        fillOpacity = 0.2,
         color = "grey",
         weight = 0.5,
         opacity = 1,
@@ -463,10 +462,6 @@ map_add <- function(input, output, session, proxy, filtered_data, summarized_dat
   })
   
   observeEvent(input$base_map_shape_click, {
-    print(polys$prev())
-    print(polys$curr())
-    print(polys$areaunit())
-    print(polys$comms())
     
     if (tab() == "Community Profiles") {
       print(polys$curr())
@@ -476,23 +471,22 @@ map_add <- function(input, output, session, proxy, filtered_data, summarized_dat
         addPolygons(
           data = summarized_data()[name == polys$prev()],
           layerId = ~name,
-          fillColor = ~color,
           color = "grey",
           weight = 0.5,
           opacity = 1,
+          fillOpacity = 0,
           highlight = highlightOptions(
             weight = 5,
-            color = "white",
-            sendToBack = T)) %>%
+            color = "white")) %>%
         addPolygons(
           data = summarized_data()[name == polys$curr()],
           layerId = ~name,
           weight = 5, 
-          fillColor = ~color, 
           opacity = 1, 
+          fillOpacity = 0,
           color = "#A36888")
-      }
-    })
+    }
+  })
 }
 
 selected_poly <- function(input, output, session) {
@@ -505,13 +499,13 @@ selected_poly <- function(input, output, session) {
     comms = allcomm,
     areaunit = c('community')
   )
-
+  
   observeEvent(input$base_map_shape_click, {
     p <- input$base_map_shape_click
     id <- str_remove(p$id, "\\_\\w{1,}$")
-
+    
     poly$prev <- poly$curr
-
+    
     if(id != poly$curr){
       poly$curr <- id
       poly$comms <- poly$curr
@@ -523,7 +517,7 @@ selected_poly <- function(input, output, session) {
       poly$areaunit <- c("community")
     }
   })
-
+  
   observeEvent(input$databox, {
     poly$prev <- c("All Communities")
     poly$curr <- c("All Communities")
