@@ -72,24 +72,32 @@ crimeIcons <- iconList(
 # (communities, neighborhoods) and temporal units (year, month, day, hour) of
 # interest.
 
-mosaic_plot <- function(.data, .timeunit){
-
-  byfilt = c(.timeunit, "crime category")
+mosaic_plot <- function(data, timeunit, areaunit, selected){
   
-  mos_data <- .data[, .N, by = byfilt
-                    ][, `:=`(prop = N/sum(N)), by = c(.timeunit)
+  if(is.null(selected)){
+    areafilter <- unique(data[[areaunit]])
+  }
+  else{
+    areafilter <- selected
+  }
+  
+  byfilt = c(timeunit, "crime category")
+  
+  mos_data <- data[data[[areaunit]] %in% areafilter, .N, by = byfilt
+                    ][, `:=`(prop = N/sum(N)), by = c(timeunit)
                       ][, `crime category` := fct_reorder(`crime category`, 
                                                           .fun = mean, 
                                                           .x = prop)]
-  out <- ggplot(
+  ggplot(
     data = mos_data, 
-    aes(x = !!sym(.timeunit), fill = `crime category`, weight = N)) +
+    aes(x = !!sym(timeunit), fill = `crime category`, weight = N)) +
     geom_bar(position = position_fill()) +
     scale_y_continuous(labels = function(x) paste0(x*100, "%")) +
-    scale_fill_manual(values = pal(8)) +
+    scale_fill_manual(values = pal(9)) +
+    labs(x = str_to_title(timeunit), y = "Percent", 
+         title = glue("Average Percent of Crimes per {str_to_title(timeunit)} by Crime Category")) +
     dillon_theme(base_size = 21)
   
-  out
 }
 
 top_n_plot <- function(data, n, dates, grouping) {
@@ -294,6 +302,52 @@ setShapeStyle <- function( map, data = getMapData(map), layerId,
 # # below the mean number of crimes ng dynamic 
 # # inputs for geographical areas (communities, neighborhoods) and temporal units 
 # # (year, month, day, hour) of interest. 
+
+lolli_plot <- function(data, areaunit, selected = NULL) {
+  
+ if(areaunit == "community") {
+   byfilt <- "community"
+   } 
+  else { 
+    byfilt <- c("community", "neighborhood")
+  }
+  
+  if(is.null(selected)) {
+    areafilt <- unique(data[[areaunit]])
+  }
+  else {
+    areafilt <- selected
+  }
+  
+  lolli_data <- data[, .N, by = .(community, neighborhood)
+                     ][, `:=`(total = sum(N)), by = byfilt
+                       ][, `:=`(standardized = round((total - mean(total))/sd(total, na.rm = TRUE), 2))
+                         ][, `:=`(pos = factor(standardized > 0))
+                           ][, `:=`(area = fct_reorder(.SD[[1]], standardized, max)), .SDcols = areaunit]
+  print(lolli_data[order(-standardized)])
+  out <- ggplot(data = lolli_data,
+         aes(x = area, y = standardized, label = standardized)) +
+    geom_point(stat = "identity", aes(col = pos), size = 7) +
+    geom_segment(
+      aes(
+        y = 0,
+        xend = area,
+        yend = standardized,
+        col = pos
+        )) +
+    scale_color_manual(values = c("#e74c3c", "#428F9B")) +
+    geom_text(color="white", size=4) +
+    labs(title="Standardized Number of Crimes",
+         y = "Standard Deviations",
+         x = areaunit) +
+    theme(legend.position = "none") +
+    ylim(-3, 3) +
+    coord_flip() +
+    dillon_theme()
+
+  out
+}
+
 # lolli_plot <- function(.data, .community){
 #   
 #   community_filt <- when(.community,

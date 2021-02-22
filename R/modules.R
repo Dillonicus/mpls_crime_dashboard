@@ -131,13 +131,13 @@ input_menu <- function(input, output, session, tab){
             shape = 'curve')
       )),
     
-    timeunits = 
+    timeunits = shinyjs::hidden(
       div(id="div_timeunits", 
           pickerInput(
             inputId = ns('timeunit'),
             label = 'Time Unit',
             choices = c('hour', 'day', 'month', 'year')
-          )),
+          ))),
     
     yearfilter = shinyjs::hidden(
       div(id = "div_yearfilter",
@@ -154,8 +154,8 @@ input_menu <- function(input, output, session, tab){
   )
   
   tablist <- list(
-    `Community Profiles` = c('yearfilter'),
-    `Crime Statistics` = c('date', 'description', 'timeunits'))
+    `Community Profiles` = c('yearfilter', 'timeunits'),
+    `Crime Statistics` = c('date', 'description'))
   
   tabs <- names(tablist)
   
@@ -196,7 +196,7 @@ info <- function(input, output, session){
     tagList(
       div(
         class = 'sidebartext',
-        style = "white-space: normal; text-align: left;",
+        style = "white-space: normal; text-align: left; padding: 10px",
         h5("Use the input menu above to change the plots, tables, and map. The available inputs change depending on the selected tab:"),
         h5("Select the", strong("Crime Statistics"), "tab to visualize crime trends for specific crime categories and periods of time. Available inputs include:",
            tags$li(strong("Dates:"), "filters crimes that occur in a certain interval;"),
@@ -249,9 +249,8 @@ map_ui <- function(id){
                           plotOutput(outputId = ns('top_n_plot')))
                     ),
                     fluidRow(
-                      box(id = 'mosaic', width = 12,
-                          plotOutput(outputId = ns('mosaic_plot'))
-                      )
+                      box(id = 'lolli', width = 12,
+                          plotOutput(height = "800px", outputId = ns("lolli_plot")))
                     )
                   ),
                   tabPanel(
@@ -261,7 +260,12 @@ map_ui <- function(id){
                           plotOutput(outputId = ns('map_plot')))),
                     fluidRow(
                       box(id = 'data1', width = 12, title = 'Data',
-                          div(reactable::reactableOutput(outputId = ns('map_data')))))
+                          div(reactable::reactableOutput(outputId = ns('map_data'))))),
+                    fluidRow(
+                      box(id = 'mosaic', width = 12,
+                          plotOutput(outputId = ns('mosaic_plot'))
+                      )
+                    )
                   )
            ))
   )}
@@ -348,7 +352,11 @@ map <- function(input, output, session, filtered_data, polys){
   
   output$mosaic_plot <- renderPlot({
     req(input$timeunit)
-    mosaic_plot(crime, input$timeunit)
+    mosaic_plot(
+      data = crime, 
+      timeunit = input$timeunit, 
+      areaunit = polys$areaunit(), 
+      selected = polys$curr())
   })
   
   output$top_n_plot <- renderPlot({
@@ -357,6 +365,14 @@ map <- function(input, output, session, filtered_data, polys){
       dates = c(input$date[1], input$date[2]), 
       n = 10, 
       grouping = 'crime description')
+  })
+  
+  output$lolli_plot <- renderPlot({
+    lolli_plot(
+      data = crime,
+      areaunit = polys$areaunit(),
+      selected = polys$curr()
+    )
   })
 }
 
@@ -385,7 +401,8 @@ map_add <- function(input, output, session, proxy, filtered_data, summarized_dat
             data = filtered_data(),
             ~ x,
             ~ y,
-            icon = ~crimeIcons[`crime category`],
+            #fill ~`crime category`,
+            #icon = ~crimeIcons[`crime category`],
             label = ~label, 
             group = "filtered_points"
           )
@@ -414,7 +431,7 @@ map_add <- function(input, output, session, proxy, filtered_data, summarized_dat
   
   observeEvent(input$base_map_shape_click, {
     
-    if (tab() == "Community Profiles") {
+    # if (tab() == "Community Profiles") {
       out <- proxy %>%
         removeShape(layerId = c(polys$curr(), polys$prev()))
       
@@ -448,7 +465,7 @@ map_add <- function(input, output, session, proxy, filtered_data, summarized_dat
               color = "white"))
       }
       return(out)
-    }
+    #}
   })
 }
 
@@ -468,8 +485,7 @@ selected_poly <- function(input, output, session) {
     {
       p <- input$base_map_shape_click
       id <- str_remove(p$id, "\\_\\w{1,}")
-      #id <- p$id
-      
+
       poly$prev <- poly$curr
       poly$curr <- id
      
