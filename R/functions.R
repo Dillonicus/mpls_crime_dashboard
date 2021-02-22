@@ -137,31 +137,60 @@ change_from <- function(data) {
 
 # Community Profiles -----------------------------------------------------------
 
-monthly_plot <- function(.data, .year, .community, .community_filt, .areaunit) {
+monthly_plot <- function(data, year, areaunit, selected) {
   
-  by_filt <- c("year", "month", "violent", .areaunit)
+  byfilter <- c("year", "month", "violent", areaunit)
+  if(is.null(selected)){
+    areafilter <- unique(data[[areaunit]])
+  }
+  else{
+    areafilter <- selected
+  }
   
-  subdat <- .data[community %in% .community_filt, .N, by = by_filt
-  ][, .(total = sum(N)), by = .(year, month, violent)
-  ][, date:=make_date(year, month)]
-  
-  ggplot(subdat, aes(x = date, y = total, color = violent, group = violent)) +
-    labs(title = "Monthly Crime Count", subtitle = paste0(.community, ": 2010 - 2020")) +
+  newdata <- data[data[[areaunit]] %in% areafilter, .N, by = byfilter
+                  ][, .(total = sum(N)), by = .(year, month, violent)
+                    ][, date := make_date(year, month)][]
+
+  ggplot(newdata, aes(x = date, y = total, color = violent, group = violent)) +
+    labs(title = "Monthly Crime Count", subtitle = paste(c(selected, " 2010 - 2010"), collapse = ":")) +
     scale_x_date(date_breaks = "1 year", labels = function(x) year(x)) +
     geom_line(alpha = 0.4, size  = 2) +
     dillon_theme()
-  }
+}
 
-summary_table <- function(.data, .year, .community){
+# monthly_plot <- function(.data, .year, .community, .community_filt, .areaunit) {
+#   
+#   by_filt <- c("year", "month", "violent", .areaunit)
+#   
+#   subdat <- .data[community %in% .community_filt, .N, by = by_filt
+#   ][, .(total = sum(N)), by = .(year, month, violent)
+#   ][, date:=make_date(year, month)]
+#   
+#   ggplot(subdat, aes(x = date, y = total, color = violent, group = violent)) +
+#     labs(title = "Monthly Crime Count", subtitle = paste0(.community, ": 2010 - 2020")) +
+#     scale_x_date(date_breaks = "1 year", labels = function(x) year(x)) +
+#     geom_line(alpha = 0.4, size  = 2) +
+#     dillon_theme()
+#   }
+
+summary_table <- function(data, years, areaunit, selected) {
   
-  table_data <- .data[year %in% .year,][community %in% .community, .N, by = .(year, violent, `crime category`)]
+  if(is.null(selected)){
+    areafilter <- unique(data[[areaunit]])
+  }
+  else{
+    areafilter <- selected
+  }
+  
+  table_data <- data[data[[areaunit]] %in% areafilter & year %in% c(years), .N, by = .(year, violent, `crime category`)]
   table_data <- dcast(table_data, violent + `crime category` ~ year, value.var = "N")
+  
   stat <- names(table_data)[c(1,2)]
   yrs <- names(table_data)[-c(1,2)]
   
   reactable::reactable(
-    table_data, 
-    groupBy = "violent", 
+    table_data,
+    groupBy = "violent",
     defaultExpanded = T,
     defaultSorted = yrs,
     defaultSortOrder = "desc",
@@ -178,6 +207,32 @@ summary_table <- function(.data, .year, .community){
       )
     )
 }
+# summary_table <- function(.data, .year, .community){
+#   
+#   table_data <- .data[year %in% .year,][community %in% .community, .N, by = .(year, violent, `crime category`)]
+#   table_data <- dcast(table_data, violent + `crime category` ~ year, value.var = "N")
+#   stat <- names(table_data)[c(1,2)]
+#   yrs <- names(table_data)[-c(1,2)]
+#   
+#   reactable::reactable(
+#     table_data, 
+#     groupBy = "violent", 
+#     defaultExpanded = T,
+#     defaultSorted = yrs,
+#     defaultSortOrder = "desc",
+#     defaultColDef = colDef(
+#       footer = function(values) if(is.numeric(values)) sum(values, na.rm = T),
+#       footerStyle = list(fontWeight = "bold")),
+#     columnGroups = list(
+#       colGroup(name = "", columns = stat),
+#       colGroup(name = "Year", columns = yrs)
+#       ),
+#     columns = list(
+#       violent = colDef(footer = "Total", name = "Category"),
+#       `crime category` = colDef(name = "Offense")
+#       )
+#     )
+# }
 
 
 setShapeStyle <- function( map, data = getMapData(map), layerId,
@@ -186,7 +241,7 @@ setShapeStyle <- function( map, data = getMapData(map), layerId,
                            fill = NULL, fillColor = NULL,
                            fillOpacity = NULL, dashArray = NULL,
                            smoothFactor = NULL, noClip = NULL,
-                           options = NULL, label = NULL
+                           options = NULL, label = NULL, highlight = NULL
 ){
   options <- c(list(layerId = layerId),
                options,
@@ -204,7 +259,6 @@ setShapeStyle <- function( map, data = getMapData(map), layerId,
   layerId <- options[[1]]
   style <- options[-1] # drop layer column
   
-  #print(list(style=style))
   leaflet::invokeMethod(map, data, "setStyle", "shape", layerId, style, label);
 }
 # Unused/Other Plots -----------------------------------------------------------

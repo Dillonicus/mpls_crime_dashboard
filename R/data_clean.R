@@ -3,6 +3,44 @@
 ################################################################################
 
 # Function to clean and perform geocoding of crime data
+# crime_clean <- function(.data, .neighborhoods, .communities){
+#   
+#   comm_geo <- .communities[['geometry']]
+#   neighb_geo <- .neighborhoods[['geometry']]
+#   bbox <- st_bbox(comm_geo)
+#   
+#   dat <- .data[between(x, bbox$xmin, bbox$xmax) & between(y, bbox$ymin, bbox$ymax),][, `:=`(
+#     col.id = .I,
+#     date  = date(reporteddatetime),
+#     time  = strftime(x = reporteddatetime,
+#                      format = "%H:%M:%S %p"),
+#     year  = lubridate::year(reporteddatetime),
+#     week  = week(reporteddatetime),
+#     day   = lubridate::wday(reporteddatetime,
+#                             label = T),
+#     month = lubridate::month(reporteddatetime,
+#                              label = T),
+#     hour  = strftime(reporteddatetime,
+#                      format = "%H:00"))][,
+#                                          today := if_else(Sys.Date() - date < 2,
+#                                                           true = 1,
+#                                                           false = 0)]
+#   
+#   dat <- codes[dat, on = "offense"]
+#   
+#   geo <- st_as_sf(dat[, .(x,y)], coords = c('x', 'y'), crs = st_crs(comm_geo))
+#   
+#   community_intersect <- st_intersects(comm_geo, geo) 
+#   community_match <- map_dfr(.x = 1:length(community_intersect), .f = ~data.table(community = .communities$community[[.x]], col.id = community_intersect[[.x]]))
+#   
+#   neighborhood_intersect <- st_intersects(neighb_geo, geo)
+#   neighborhood_match <- map_dfr(.x = 1:length(neighborhood_intersect), .f = ~data.table(neighborhood = .neighborhoods$neighborhood[[.x]], col.id = neighborhood_intersect[[.x]]))
+#   
+#   match <- community_match[neighborhood_match, on = "col.id"][, .(col.id, community, neighborhood)]
+#   
+#   match[dat, on = 'col.id'][!is.na(community) & community != "", -c('col.id')]
+# }
+
 crime_clean <- function(.data, .neighborhoods, .communities){
   
   comm_geo <- .communities[['geometry']]
@@ -31,10 +69,10 @@ crime_clean <- function(.data, .neighborhoods, .communities){
   geo <- st_as_sf(dat[, .(x,y)], coords = c('x', 'y'), crs = st_crs(comm_geo))
   
   community_intersect <- st_intersects(comm_geo, geo) 
-  community_match <- map_dfr(.x = 1:length(community_intersect), .f = ~data.table(community = .communities$community[[.x]], col.id = community_intersect[[.x]]))
+  community_match <- map_dfr(.x = 1:length(community_intersect), .f = ~data.table(community = .communities$name[[.x]], col.id = community_intersect[[.x]]))
   
   neighborhood_intersect <- st_intersects(neighb_geo, geo)
-  neighborhood_match <- map_dfr(.x = 1:length(neighborhood_intersect), .f = ~data.table(neighborhood = .neighborhoods$neighborhood[[.x]], col.id = neighborhood_intersect[[.x]]))
+  neighborhood_match <- map_dfr(.x = 1:length(neighborhood_intersect), .f = ~data.table(neighborhood = .neighborhoods$name[[.x]], col.id = neighborhood_intersect[[.x]]))
   
   match <- community_match[neighborhood_match, on = "col.id"][, .(col.id, community, neighborhood)]
   
@@ -42,11 +80,25 @@ crime_clean <- function(.data, .neighborhoods, .communities){
 }
 
 # Shapefiles for Minneapolis Communities and Neighborhoods
-communities <- data.table(st_read('data/communities/Communities.shp', layer = 'Communities'))[, .(community = CommName, geometry)]
-neighborhoods <- data.table(st_read('data/neighborhoods/Neighborhoods.shp', layer = 'Neighborhoods'))[, .(neighborhood = BDNAME, geometry)]
+# communities <- data.table(st_read('data/communities/Communities.shp', layer = 'Communities'))[, .(community = CommName, geometry)]
+# neighborhoods <- data.table(st_read('data/neighborhoods/Neighborhoods.shp', layer = 'Neighborhoods'))[, .(neighborhood = BDNAME, geometry)]
+# 
+# geo <- rbind(communities[, .(name = community, type = 'community', geometry)], neighborhoods[, .(name = neighborhood, type = 'neighborhood', geometry)])
+# geo[, `:=`(layerid = paste(name, type, sep = "_"))]
 
-geo <- rbind(communities[, .(name = community, type = 'community', geometry)], neighborhoods[, .(name = neighborhood, type = 'neighborhood', geometry)])
-geo[, `:=`(layerid = paste(name, type, sep = "_"))]
+
+communities <- data.table(st_read('data/communities/Communities.shp', layer = 'Communities'))
+communities <- communities[, .(name = CommName, geometry)][, `:=`(layerid = paste(name, 'community', sep = "_"))]
+neighborhoods <- data.table(st_read('data/neighborhoods/Neighborhoods.shp', layer = 'Neighborhoods'))
+neighborhoods <- neighborhoods[, .(name = BDNAME, geometry)][, `:=`(layerid = paste(name, 'neighborhood', sep = "_"))]
+
+geo <- rbind(communities[, .(name, type = 'community', geometry, layerid)], neighborhoods[, .(name, type = 'neighborhood', geometry, layerid)])
+
+geolist <- list(
+  community = communities,
+  neighborhood = neighborhoods
+)
+
 # File with UCR codes, crime category, and offense codes to translate into readable
 # crime descriptions. Merged with the final crime dataset
 codes <- fread("data/UCR.txt")
@@ -102,7 +154,9 @@ crime2020 <- crime_clean(crime2020, neighborhoods, communities)
 crime <- rbind(crime2010_2019, crime2020)[, violent := ifelse(`ucr code` %in% c(1,3,4,5), "Violent Crime", "Property Crime")]
 
 # Summary data
+# crime_summary <- crime[, .N, by = .(year, month, violent, `crime category`, community, neighborhood)]
 crime_summary <- crime[, .N, by = .(year, month, violent, `crime category`, community, neighborhood)]
+crime_summary <- melt(crime_summary, measure.vars = c('community', 'neighborhood'), variable.name = 'areaunit', value.name = 'name')
 
 # Previous year
 crime_change <- change_from(crime)

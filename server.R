@@ -22,8 +22,9 @@ shinyServer(function(input, output, session) {
   
   # Generate filtered data to display on map based on inputs
   map_data <- callModule(filter_data, id = "Inputs", tab = "Map")
-  summarized_data <- callModule(module = summary_data, id = "Inputs")
-
+  #summarized_data <- callModule(module = summary_data, id = "Inputs")
+  summarized_data <- callModule(module = summary_data, id = "Inputs", polys = poly)
+  
   # Generate base map
   callModule(map, id = "Inputs", filtered_data = map_data, polys = poly)
   
